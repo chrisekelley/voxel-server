@@ -13,6 +13,7 @@ var players = {}, lastProcessedSeq = 0
 var localInputs = [], connected = false, erase = true
 var currentMaterial = 1
 var lerpPercent = 0.1
+var createTouchControls = require('fps-touch-controls')
 
 window.addEventListener('keydown', function (ev) {
   if (ev.keyCode === 'X'.charCodeAt(0)) erase = !erase
@@ -70,6 +71,15 @@ function createGame(options) {
 
   var container = document.querySelector('#container')
   game.appendTo(container)
+  
+  console.log("touch-enabled")
+  window.touchControls = createTouchControls()
+  game.controls.enabled = true
+  touchControls.pipe(game.controls)
+  touchControls.on('command', function(command, setting) {
+     game.controls.emit('command', command, setting)
+  })
+  
   game.setupPointerLock(container)
   rescue(game)
   game.viking = skin(game.THREE, 'viking.png')
