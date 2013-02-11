@@ -8,6 +8,7 @@ var duplexEmitter = require('duplex-emitter')
 var skin = require('minecraft-skin')
 var toolbar = require('toolbar')
 var blockSelector = toolbar({el: '#tools'})
+var createTouchControls = require('fps-touch-controls')
 
 var emitter, playerID, game
 var players = {}, lastProcessedSeq = 0
@@ -102,12 +103,21 @@ function createGame(options) {
 
   var container = document.querySelector('#container')
   game.appendTo(container)
+  
+  console.log("touch-enabled")
+  
+  window.touchControls = createTouchControls()
+  game.controls.enabled = true
+  touchControls.pipe(game.controls)
+  touchControls.on('command', function(command, setting) {
+    game.controls.emit('command', command, setting)
+  })
+  
   container.addEventListener('click', function() {
     game.requestPointerLock(container)
   })
   
   game.viking = skin(game.THREE, 'viking.png')
-  console.log("viking4")
   game.controls.pitchObject.rotation.x = -1.5;
   
   blockSelector.on('select', function(material) {
