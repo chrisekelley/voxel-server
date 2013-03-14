@@ -48468,7 +48468,7 @@ exports.decode = function(runs, buf_len) {
       s += 7;
     }
     l += runs[ptr++] << s;
-    console.log(l);
+    // console.log(l);
     if(ptr >= runs.length || (cptr + l > chunk.length) ) {
       throw new Error("Chunk buffer overflow");
     }
@@ -48498,6 +48498,7 @@ function TouchControls(opts) {
   this.readable = true
   this.controller = GameController
   this.controller.init( { 
+	forcePerformanceFriendly: false ,
     left: { 
 			dpad: {
 				up: {
@@ -48520,7 +48521,7 @@ function TouchControls(opts) {
 		},
     right: { 
       type: 'joystick', 
-      position: { right: '15%', bottom: '15%' },
+      position: { right: '20%', bottom: '20%' },
       joystick: {
         touchMove: function( ev ) {
           ev.dy = ev.dy * -1 // invert controls
@@ -48710,29 +48711,28 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 				buttons: [
 					{ offset: { x: '-13%', y: 0 }, label: 'X', radius: '7%', stroke: 2, backgroundColor: 'blue', fontColor: '#fff', touchStart: function() {
 						// Blue is currently mapped to up button
-						GameController.simulateKeyEvent( 'press', 38 );
-						GameController.simulateKeyEvent( 'down', 38 );
+						GameController.simulateKeyEvent( 'press', 88 ); // x key
+						GameController.simulateKeyEvent( 'down', 88 );
 					}, touchEnd: function() {
-						GameController.simulateKeyEvent( 'up', 38 );	
+						GameController.simulateKeyEvent( 'up', 88 );	
 					} },
-					{ offset: { x: 0, y: '-11%' }, label: 'Y', radius: '7%', stroke: 2, backgroundColor: 'yellow', fontColor: '#fff' },
-					{ offset: { x: '13%', y: 0 }, label: 'B', radius: '7%', stroke: 2, backgroundColor: 'red', fontColor: '#fff', touchStart: function() {
-						// Red is currently mapped to down button, and space button
-						GameController.simulateKeyEvent( 'press', 32 );
-						GameController.simulateKeyEvent( 'down', 32 );
-	
-						GameController.simulateKeyEvent( 'press', 40 );
-						GameController.simulateKeyEvent( 'down', 40 );
+					{ offset: { x: 0, y: '-11%' }, label: 'Y', radius: '7%', stroke: 2, backgroundColor: 'yellow', fontColor: '#fff', touchStart: function() {
+						GameController.simulateKeyEvent( 'press', 70 ); // f key
+						GameController.simulateKeyEvent( 'down', 70 );
 					}, touchEnd: function() {
-						GameController.simulateKeyEvent( 'up', 32 );						
-						GameController.simulateKeyEvent( 'up', 40 );
+						GameController.simulateKeyEvent( 'up', 70 );						
+					}  },
+					{ offset: { x: '13%', y: 0 }, label: 'B', radius: '7%', stroke: 2, backgroundColor: 'red', fontColor: '#fff', touchStart: function() {
+						GameController.simulateKeyEvent( 'press', 90 ); // z key
+						GameController.simulateKeyEvent( 'down', 90 );
+					}, touchEnd: function() {
+						GameController.simulateKeyEvent( 'up', 90 );						
 					} },
 					{ offset: { x: 0, y: '11%' }, label: 'A', radius: '7%', stroke: 2, backgroundColor: 'green', fontColor: '#fff', touchStart: function() {
-						// Green is currently mapped to up button
-						GameController.simulateKeyEvent( 'press', 38 );
-						GameController.simulateKeyEvent( 'down', 38 );
+						GameController.simulateKeyEvent( 'press', 67 ); // a key
+						GameController.simulateKeyEvent( 'down', 67 );
 					}, touchEnd: function() {
-						GameController.simulateKeyEvent( 'up', 38 );	
+						GameController.simulateKeyEvent( 'up', 67 );	
 					}  }
 				],
 				dpad: {
@@ -48769,9 +48769,22 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 		
 		// Areas (objects) on the screen that can be touched
 		touchableAreas: [],
+		touchableAreasCount: 0,
 		
 		// Multi-touch
 		touches: [],
+		
+		// Canvas offset on page (for coverting touch coordinates)
+		offsetX: 0,
+		offsetY: 0,
+		
+		// Bounding box - used for clearRect - first we determine which areas of the canvas are actually drawn to
+		bound: {
+			left: false,
+			right: false,
+			top: false,
+			bottom: false
+		},
 		
 		// Heavy sprites (with gradients) are cached as a canvas to improve performance
 		cachedSprites: {},
@@ -48787,8 +48800,20 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 	
 			// Merge default options and specified options
 			options = options || {};
-			extend( this.options, options );
+			extend( this.options, options );	
 			
+			var userAgent = navigator.userAgent.toLowerCase();
+			// See if we should run the performanceFriendly version (for slower CPUs)
+			//this.performanceFriendly = ( userAgent.indexOf( 'iphone' ) !== -1 || userAgent.indexOf( 'android' ) !== -1 || this.options.forcePerformanceFriendly );
+			this.performanceFriendly = this.options.forcePerformanceFriendly;
+			console.log("this.performanceFriendly: " + this.performanceFriendly)
+			if (this.performanceFriendly == null)  {
+				console.log("this.performanceFriendly is null. Testing if iphone or android.")
+				console.log("userAgent.indexOf( 'android' ): " + userAgent.indexOf( 'android' ) + " userAgent.indexOf( 'iphone' ): " + userAgent.indexOf( 'iphone' ));
+				this.performanceFriendly = ( userAgent.indexOf( 'iphone' ) !== -1 || userAgent.indexOf( 'android' ) !== -1);
+				console.log("this.performanceFriendly: " + this.performanceFriendly)
+			}
+			console.log("this.options.forcePerformanceFriendly: " + this.options.forcePerformanceFriendly + " Computed performanceFriendly: " + this.performanceFriendly);
 			// Grab the canvas if one wasn't passed
 			var ele;
 			if( !this.options.canvas || !( ele = document.getElementById( this.options.canvas ) ) )
@@ -48804,6 +48829,32 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			
 			// Create a canvas that goes directly on top of the game canvas
 			this.createOverlayCanvas();
+		},
+		
+		/**
+		 * Finds the actual 4 corners of canvas that are being used (so we don't have to clear the entire canvas each render) 
+		 * Called when each new touchableArea is added in
+		 * @param {object} options - x, y, width, height
+		 */
+		boundingSet: function( options ) {
+			var directions = ['left', 'right'];
+			
+			var width = options.width || ( ( this.getPixels( options.radius ) + this.getPixels( options.stroke ) ) * 2 );
+			var height = options.height || ( ( this.getPixels( options.radius ) + this.getPixels( options.stroke ) ) * 2 );
+			
+			var left = this.getPixels( options.x );
+			var right = this.getPixels( options.x ) + this.getPixels( width );
+			var top = this.getPixels( options.y );
+			var bottom = this.getPixels( options.y + height );
+			
+			if( this.bound.left === false || left < this.bound.left )
+				this.bound.left = left;
+			if( this.bound.right === false || right > this.bound.right )
+				this.bound.right = right;
+			if( this.bound.top === false || top < this.bound.top )
+				this.bound.top = top;
+			if( this.bound.bottom === false || bottom > this.bound.bottom )
+				this.bound.bottom = bottom;
 		},
 		
 		/**
@@ -48845,15 +48896,23 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			this.canvas.width = this.options.canvas.width;
 			this.canvas.height = this.options.canvas.height;
 			
+			this.offsetX = GameController.options.canvas.offsetLeft + document.body.scrollLeft;
+			this.offsetY = GameController.options.canvas.offsetTop + document.body.scrollTop;
+			
 			// Get in on this retina action
 			if( this.options.canvas.style.width && this.options.canvas.style.height && this.options.canvas.style.height.indexOf( 'px' ) !== -1 ) 
 			{
 				this.canvas.style.width = this.options.canvas.style.width;
 				this.canvas.style.height = this.options.canvas.style.height;
-				this.pixelRatio = this.canvas.width / parseInt( this.canvas.style.width );
+				this.calculatedPixelRatio = this.canvas.width / parseInt( this.canvas.style.width );
+				this.pixelRatio = window.devicePixelRatio;
+				console.log("window.devicePixelRatio:" + window.devicePixelRatio);
+				console.log("this.options.canvas.style.height.indexOf( 'px' ): " + this.options.canvas.style.height.indexOf( 'px' ))
+				console.log("this.calculatedPixelRatio: " + this.calculatedPixelRatio + " this.canvas.width: " + this.canvas.width + " parseInt( this.canvas.style.width ):" + parseInt( this.canvas.style.width ))
 			}
 			
 			this.canvas.style.position = 'absolute';
+			this.canvas.style.zIndex = '5';
 			this.canvas.style.left = this.options.canvas.offsetLeft + 'px';
 			this.canvas.style.top = this.options.canvas.offsetTop + 'px';
 			this.canvas.setAttribute( 'style', this.canvas.getAttribute( 'style' ) +' -ms-touch-action: none;' );
@@ -48900,7 +48959,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 				return false;
 				
 			/* If they have jQuery, use it because it works better for mobile safari */
-			if( typeof jQuery !== "undefined" )
+			if( typeof jQuery !== 'undefined' )
 			{
 				var press = jQuery.Event( 'key' + eventName );
 				press.ctrlKey = false;
@@ -48912,7 +48971,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var oEvent = document.createEvent( 'KeyboardEvent' );
 			
 			// Chromium Hack
-			if( navigator.userAgent.toLowerCase().indexOf('chrome') !== -1 )
+			if( navigator.userAgent.toLowerCase().indexOf( 'chrome' ) !== -1 )
 			{
 				Object.defineProperty( oEvent, 'keyCode', {
 					get : function() {
@@ -49014,6 +49073,9 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var direction = new TouchableDirection( options );
 			
 			direction.id = this.touchableAreas.push( direction );
+			this.touchableAreasCount++;
+			
+			this.boundingSet( options );
 		},
 		
 		/**
@@ -49025,7 +49087,9 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var joystick = new TouchableJoystick( options );
 			
 			joystick.id = this.touchableAreas.push( joystick );
+			this.touchableAreasCount++;
 			
+			this.boundingSet( options );
 		},
 		
 		/**
@@ -49037,6 +49101,9 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var button = new TouchableButton( options );
 			
 			button.id = this.touchableAreas.push( button );
+			this.touchableAreasCount++;
+			
+			this.boundingSet( options );
 		},
 		
 		addTouchableArea: function( check, callback ) {
@@ -49047,6 +49114,9 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var _this = this;
 			for( var i = 0, j = buttons.length; i < j; i++ )
 			{
+				if( typeof buttons[i] === 'undefined' || typeof buttons[i].offset === 'undefined' )
+					continue;
+					
 				var posX = this.getPositionX( side );
 				var posY = this.getPositionY( side );
 							
@@ -49078,6 +49148,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 				}
 				var center = new TouchableCircle( options ); 
 				this.touchableAreas.push( center );
+				this.touchableAreasCount++;
 			}
 	
 			// Up arrow
@@ -49122,6 +49193,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			var joystick = this.options[ side ].joystick;
 			joystick.x = this.getPositionX( side );
 			joystick.y = this.getPositionY( side );
+	
 			this.addJoystick( joystick );
 		},
 		
@@ -49154,7 +49226,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 		 */
 		normalizeTouchPositionX: function( x )
 		{
-			return ( x - GameController.options.canvas.offsetLeft + document.body.scrollLeft ) * ( this.pixelRatio );
+			return ( x - this.offsetX ) * ( this.pixelRatio );
 		},
 		
 		/**
@@ -49163,7 +49235,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 		 */
 		normalizeTouchPositionY: function( y )
 		{
-			return ( y - GameController.options.canvas.offsetTop + document.body.scrollTop ) * ( this.pixelRatio );
+			return ( y - this.offsetY ) * ( this.pixelRatio );
 		},
 		
 		/**
@@ -49204,52 +49276,19 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 			else
 				return this.getYFromBottom( this.getPixels( this.options[ side ].position.bottom, 'y' ) );
 		},
-		
-		render: function() {
-	
-			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
-				
-			// When no touch events are happening, this enables 'paused' mode, which only skips this small part.
-			// Skipping the clearRect and draw()s would be nice, but it messes with the transparent gradients
-			if( ! this.paused )
+
+		/**
+		 * Processes the info for each touchableArea 
+		 */
+		renderAreas: function() {
+			for( var i = 0, j = this.touchableAreasCount; i < j; i++ )
 			{
-				var cacheId = 'touch-circle';
-				var cached = GameController.cachedSprites[ cacheId ];
-				if( ! cached && this.options.touchRadius )
-				{
-					var subCanvas = document.createElement( 'canvas' );
-					var ctx = subCanvas.getContext( '2d' );
-					subCanvas.width = 2 * this.options.touchRadius;
-					subCanvas.height = 2 * this.options.touchRadius;
-		
-					var center = this.options.touchRadius;
-					var gradient = ctx.createRadialGradient( center, center, 1, center, center, this.options.touchRadius ); // 10 = end radius
-					gradient.addColorStop( 0, 'rgba( 200, 200, 200, 1 )' );
-					gradient.addColorStop( 1, 'rgba( 200, 200, 200, 0 )' );
-					ctx.beginPath();
-					ctx.fillStyle = gradient;
-					ctx.arc( center, center, this.options.touchRadius, 0 , 2 * Math.PI, false );
-					ctx.fill();
+				var area = this.touchableAreas[ i ];				
 				
-					cached = GameController.cachedSprites[ cacheId ] = subCanvas;
-				}
-				
-				// Draw the current touch positions if any
-				for( var i = 0, j = this.touches.length; i < j; i++ )
-				{
-					var touch = this.touches[ i ];
-					if( typeof touch === 'undefined' )
-						continue;
-					var x = this.normalizeTouchPositionX( touch.clientX ), y = this.normalizeTouchPositionY( touch.clientY );
-					this.ctx.drawImage( cached, x - this.options.touchRadius, y - this.options.touchRadius );
-				}
-			}
-			
-			for( var i = 0, j = this.touchableAreas.length; i < j; i++ )
-			{	
-				this.touchableAreas[ i ].draw();
-				
-				var area = this.touchableAreas[ i ];
+				if( typeof area === 'undefined' )
+					continue;
+
+				area.draw();
 					
 				// Go through all touches to see if any hit this area
 				var touched = false;
@@ -49268,6 +49307,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 							touched = this.touches[ k ];
 					}
 				}
+
 				if( touched )
 				{
 					if( !area.active )
@@ -49279,7 +49319,59 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 					area.touchEndWrapper( touched );
 				}
 			}
+		},
+		
+		render: function() {
+			if( ! this.paused || ! this.performanceFriendly )
+				this.ctx.clearRect( this.bound.left, this.bound.top, this.bound.right - this.bound.left, this.bound.bottom - this.bound.top );
+	
+			// Draw feedback for when screen is being touched
+			// When no touch events are happening, this enables 'paused' mode, which skips running this
+			// This isn't run at all in performanceFriendly mode
+			if( ! this.paused && ! this.performanceFriendly )
+			{
+				var cacheId = 'touch-circle';
+				var cached = this.cachedSprites[ cacheId ];
+				
+				if( ! cached && this.options.touchRadius )
+				{
+					var subCanvas = document.createElement( 'canvas' );
+					var ctx = subCanvas.getContext( '2d' );
+					subCanvas.width = 2 * this.options.touchRadius;
+					subCanvas.height = 2 * this.options.touchRadius;
+		
+					var center = this.options.touchRadius;
+					var gradient = ctx.createRadialGradient( center, center, 1, center, center, this.options.touchRadius ); // 10 = end radius
+					gradient.addColorStop( 0, 'rgba( 200, 200, 200, 1 )' );
+					gradient.addColorStop( 1, 'rgba( 200, 200, 200, 0 )' );
+					ctx.beginPath();
+					ctx.fillStyle = gradient;
+					ctx.arc( center, center, this.options.touchRadius, 0 , 2 * Math.PI, false );
+					ctx.fill();
+				
+					cached = GameController.cachedSprites[ cacheId ] = subCanvas;
+				}
+				// Draw the current touch positions if any
+				for( var i = 0, j = this.touches.length; i < j; i++ )
+				{
+					var touch = this.touches[ i ];
+					if( typeof touch === 'undefined' )
+						continue;
+					var x = this.normalizeTouchPositionX( touch.clientX ), y = this.normalizeTouchPositionY( touch.clientY );
+					if( x - this.options.touchRadius > this.bound.left && x + this.options.touchRadius < this.bound.right &&  
+																y - this.options.touchRadius > this.bound.top && y + this.options.touchRadius < this.bound.bottom )
+					  this.ctx.drawImage( cached, x - this.options.touchRadius, y - this.options.touchRadius );
+					//console.log("x: " + x + " y: " + y + " touch.clientX: " + touch.clientX + " touch.clientY:" + touch.clientY + " this.bound.left: " + this.bound.left + " this.bound.right: "  + this.bound.right);	
+				}
+			}
 			
+			// Render if the game isn't paused, or we're not in performanceFriendly mode (running when not paused keeps the semi-transparent gradients looking better for some reason)
+			if( ! this.paused || ! this.performanceFriendly )
+			{
+				// Process all the info for each touchable area
+				this.renderAreas();
+			}
+
 			window.requestAnimationFrame( this.renderWrapper );
 		},
 		/**
@@ -49287,8 +49379,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 		 */
 		renderWrapper: function() {
 			GameController.render();
-		}
-		
+		},	
 	}
 	
 	/**
@@ -49354,7 +49445,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 				this.lastPosX = e.clientX;
 				this.lastPosY = e.clientY;
 			}
-			// Mark this direction as inactive
+			// Mark this direction as active
 			this.active = true;
 		};
 		
@@ -49582,7 +49673,7 @@ require.define("/node_modules/fps-touch-controls/gamecontroller/gamecontroller.j
 				
 				cached = GameController.cachedSprites[ cacheId ] = subCanvas;
 			}
-			
+
 			GameController.ctx.drawImage( cached, this.x, this.y );
 			
 			
