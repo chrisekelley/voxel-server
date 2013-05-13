@@ -35,6 +35,7 @@ module.exports = function() {
   }
 
   var game = engine(settings)
+  console.log("Creating game on server.")
 
   everyauth.debug = true
   var cookieParser = express.cookieParser('secret')
@@ -126,12 +127,12 @@ module.exports = function() {
 
   var bundle = browserify_express({
     entry: __dirname + '/www/js/demo.js',
-    watch: __dirname + '/www/js/',
+    watch: [__dirname + '/www/js/', __dirname + '/node_modules/voxel-player/node_modules/minecraft-skin/'],
     mount: '/js/bundle.js',
     verbose: true,
     minify: false,
     bundle_opts: { debug: true }, // enable inline sourcemap on js files
-    watch_opts: { recursive: false} // disable recursive file watch
+    watch_opts: { recursive: true} // disable recursive file watch
   })
 
   var app = express()
