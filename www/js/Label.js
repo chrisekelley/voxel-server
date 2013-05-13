@@ -1,7 +1,10 @@
-var THREE = require('three')
-
 // kudos: http://japhr.blogspot.com.es/2013/03/fun-with-threejs-camera-orientation.html
-module.exports = Label
+
+var THREE
+
+module.exports = function (three, LabelPlugin) {
+
+THREE = three // hack until three.js fixes multiple instantiation
 
 function Label(object, content, duration) {
   this.object = object;
@@ -28,9 +31,9 @@ Label.prototype.buildElement = function() {
 
 Label.prototype.render = function(scene, cam) {
   var p3d = this.object.position.clone();
-  p3d.z = p3d.z + this.object.boundRadius * Math.sin(cam.rotation.x);
-  p3d.y = p3d.y + this.object.boundRadius * Math.cos(cam.rotation.x) * Math.cos(cam.rotation.z);
-  p3d.x = p3d.x - this.object.boundRadius * Math.sin(cam.rotation.z) * Math.sin(cam.rotation.y);
+  p3d.z = p3d.z + 0 * Math.sin(cam.rotation.x);
+  p3d.y = p3d.y + 0 * Math.cos(cam.rotation.x) * Math.cos(cam.rotation.z);
+  p3d.x = p3d.x - 0 * Math.sin(cam.rotation.z) * Math.sin(cam.rotation.y);
 
   var projector = new THREE.Projector(),
       pos = projector.projectVector(p3d, cam),
@@ -54,3 +57,6 @@ Label.prototype.remove = function(delay) {
   return LabelPlugin.remove(this);
 };
 
+  return Label;
+
+}
